@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🅐🅟 𝗧𝗘𝗖𝗛 ⚡ 𝗠𝗔𝗥𝗞𝗘𝗧 🛍️</title>
+    <title>𝗧𝗠𝗚𝗕𝗗_𝗚𝗠𝗔𝗜𝗟_𝗦𝗘𝗟𝗟</title>
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -119,34 +119,55 @@
         .dot { display: inline-block; height: 8px; width: 8px; margin: 0 4px; background: #bbb; border-radius: 50%; cursor: pointer; transition: background 0.3s; }
         .dot.active { background: #007bff; }
 
-        /* --- NEW: Premium Loader --- */
+        /* --- UPDATED: Premium Loader --- */
         #loader {
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             gap: 1.5rem; transition: opacity 0.5s ease;
             text-align: center; padding: 2rem;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background: #fff;
         }
-        #loader .logo-container { animation: popIn 0.8s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards; }
+        .loader-logo-wrapper {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            animation: popIn 0.8s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
+        }
+        .loader-logo-wrapper svg {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .loader-ring {
+            stroke: #e2e8f0;
+        }
+        .loader-path {
+            stroke: #007bff;
+            stroke-dasharray: 283;
+            stroke-dashoffset: 283;
+            animation: draw 2s ease-in-out 0.5s forwards;
+        }
         #loader .loader-text {
-            opacity: 0; animation: fadeInText 1s ease-in-out 0.5s forwards;
+            opacity: 0; animation: fadeInText 1s ease-in-out 1s forwards;
             font-weight: bold; font-size: 1.5rem;
         }
         #loader .loader-subtext {
-            opacity: 0; animation: fadeInText 1s ease-in-out 0.8s forwards;
+            opacity: 0; animation: fadeInText 1s ease-in-out 1.3s forwards;
             color: #6b7280;
-        }
-        #loader .progress-bar {
-            width: 80%; max-width: 250px; height: 4px; background-color: rgba(0,0,0,0.1);
-            border-radius: 2px; margin-top: 1.5rem; overflow: hidden;
-            opacity: 0; animation: fadeInText 1s ease-in-out 1s forwards;
-        }
-        #loader .progress-bar-inner {
-            width: 0; height: 100%; background-color: #007bff;
-            border-radius: 2px; animation: loadProgress 2s ease-in-out 1.2s forwards;
         }
         @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         @keyframes fadeInText { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes loadProgress { from { width: 0%; } to { width: 100%; } }
+        @keyframes draw { to { stroke-dashoffset: 0; } }
+        @keyframes spin-inner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loader-inner-icon {
+            animation: spin-inner 30s linear infinite, popIn 1s ease 1.5s forwards;
+            opacity: 0;
+            transform-origin: center;
+        }
 
         /* --- NEW: Channel Join Gate --- */
         #channel-join-gate {
@@ -316,15 +337,20 @@
 </head>
 <body class="max-w-md mx-auto">
 
-    <!-- =========== NEW PREMIUM LOADER =========== -->
+    <!-- =========== UPDATED PREMIUM LOADER =========== -->
     <div id="loader" class="fixed inset-0 z-[100]">
         <div>
-            <div class="logo-container">
-                 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600 mx-auto"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            <div class="loader-logo-wrapper">
+                <svg viewBox="0 0 100 100">
+                    <circle class="loader-ring" cx="50" cy="50" r="45" stroke-width="5" fill="none" />
+                    <circle class="loader-path" cx="50" cy="50" r="45" stroke-width="5" fill="none" transform="rotate(-90 50 50)" />
+                    <g class="loader-inner-icon">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2" transform="scale(2.08) translate(11, 11)" stroke="#007bff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                    </g>
+                </svg>
             </div>
-            <h1 class="text-accent-gradient loader-text mt-4">Welcome to 🅐🅟 𝗧𝗘𝗖𝗛 ⚡ 𝗠𝗔𝗥𝗞𝗘𝗧 🛍️</h1>
+            <h1 class="text-accent-gradient loader-text mt-4">𝗧𝗠𝗚𝗕𝗗_𝗚𝗠𝗔𝗜𝗟_𝗦𝗘𝗟𝗟</h1>
             <p id="loader-status-text" class="loader-subtext mt-2">Initializing your premium session...</p>
-            <div class="progress-bar"><div class="progress-bar-inner"></div></div>
         </div>
     </div>
     
@@ -338,11 +364,11 @@
             To use our bot, you must join our official channels. This helps us prevent spam and keep you updated.
         </p>
         <div class="w-full max-w-xs space-y-3">
-            <a href="https://t.me/aptechonlineincome" target="_blank" class="btn-gradient w-full px-8 py-3 rounded-full font-bold text-lg shadow-lg flex items-center justify-center gap-2">
+            <a href="https://t.me/facebook_sell_channel" target="_blank" class="btn-gradient w-full px-8 py-3 rounded-full font-bold text-lg shadow-lg flex items-center justify-center gap-2">
                 <i data-lucide="arrow-right" class="w-5 h-5"></i>
                 <span>Join Channel 1</span>
             </a>
-            <a href="https://t.me/gmailmarketter" target="_blank" class="btn-gradient w-full px-8 py-3 rounded-full font-bold text-lg shadow-lg flex items-center justify-center gap-2">
+            <a href="https://t.me/+gunFt-fsTlc3YWM1" target="_blank" class="btn-gradient w-full px-8 py-3 rounded-full font-bold text-lg shadow-lg flex items-center justify-center gap-2">
                 <i data-lucide="arrow-right" class="w-5 h-5"></i>
                 <span>Join Channel 2</span>
             </a>
@@ -360,7 +386,7 @@
         <nav id="support-channels-list" class="flex-grow overflow-y-auto">
             </nav>
         <div class="p-4 text-center text-xs text-gray-400 border-t">
-            🅐🅟 𝗧𝗘𝗖𝗛 ⚡ 𝗠𝗔𝗥𝗞𝗘𝗧 🛍️ &copy; 2026
+            𝗧𝗠𝗚𝗕𝗗_𝗚𝗠𝗔𝗜𝗟_𝗦𝗘𝗟𝗟 &copy; 2026
         </div>
     </aside>
     <div id="app-container" class="min-h-screen flex-col main-page">
@@ -492,8 +518,8 @@
             <div id="mail-page" class="sub-page">
                 <div class="p-4 space-y-6">
                     <div class="mail-view-switcher">
-                        <button id="login-mail-btn" class="active">LOGIN MAIL</button>
-                        <button id="otp-mail-btn">OTP MAIL</button>
+                        <button id="login-mail-btn" class="active">OTP MAIL</button>
+                        <button id="otp-mail-btn">LOGIN MAIL</button>
                     </div>
 
                     <div id="mail-views-container">
@@ -576,7 +602,7 @@
                 </div>
             </div>
             
-             <!-- =========== [NEW] REPORT HISTORY PAGE =========== -->
+             <!-- =========== [NEW & UPDATED] REPORT HISTORY PAGE =========== -->
             <div id="report-history-page" class="p-4 space-y-6 sub-page">
                  <div class="relative flex items-center justify-center mb-4">
                     <button onclick="navigateTo('profile-page')" class="absolute left-0 p-2 rounded-full hover:bg-gray-100 transition-colors">
@@ -585,19 +611,10 @@
                     <h2 class="text-xl font-bold text-center text-gray-800">Report History</h2>
                 </div>
                 
-                <div class="space-y-6">
-                    <div>
-                        <h3 class="font-semibold text-lg text-yellow-600 mb-3 flex items-center gap-2"><i data-lucide="hourglass"></i> Pending Reports</h3>
-                        <div id="pending-reports-list" class="space-y-3"></div>
-                    </div>
-                     <div>
-                        <h3 class="font-semibold text-lg text-green-600 mb-3 flex items-center gap-2"><i data-lucide="check-circle"></i> Approved Reports</h3>
-                        <div id="approved-reports-list" class="space-y-3"></div>
-                    </div>
-                     <div>
-                        <h3 class="font-semibold text-lg text-red-600 mb-3 flex items-center gap-2"><i data-lucide="x-circle"></i> Rejected Reports</h3>
-                        <div id="rejected-reports-list" class="space-y-3"></div>
-                    </div>
+                <div class="flex flex-col items-center justify-center text-center pt-16">
+                    <i data-lucide="construct" class="w-16 h-16 text-gray-400 mb-4"></i>
+                    <h3 class="text-2xl font-bold text-gray-700">Coming Soon!</h3>
+                    <p class="text-gray-500 mt-2">This feature is currently under construction.<br>We are working hard to bring it to you.</p>
                 </div>
             </div>
 
@@ -811,13 +828,13 @@
                 <div class="w-16 h-16 bg-green-100 rounded-full mx-auto flex items-center justify-center">
                     <i data-lucide="shopping-cart" class="w-8 h-8 text-green-600"></i>
                 </div>
-                <h3 class="text-2xl font-bold text-gray-800">Bulk Purchase Successful!</h3>
+                <h3 class="text-2xl font-bold text-gray-800">MAIL Purchase Successful!</h3>
                 <p id="bulk-purchase-summary" class="text-sm text-gray-600"></p>
             </div>
             
             <div class="flex items-center gap-3 pt-4 border-t">
                 <button id="bulk-success-xlsx-copy-btn" class="w-full p-3 rounded-lg bg-gray-100 text-gray-800 font-semibold flex items-center justify-center gap-2 hover:bg-gray-200">
-                    <i data-lucide="table-2" class="w-5 h-5"></i><span>XLSX Copy All</span>
+                    <i data-lucide="table-2" class="w-5 h-5"></i><span>Copy All</span>
                 </button>
                 <button id="bulk-success-send-telegram-btn" class="w-full p-3 rounded-lg bg-gray-100 text-gray-800 font-semibold flex items-center justify-center gap-2 hover:bg-gray-200">
                     <i data-lucide="send" class="w-5 h-5"></i><span>Send All</span>
@@ -869,21 +886,21 @@
 
 
     <script type="module">
-        const ADMIN_UID = "6954647230";
-        const BOT_TOKEN = "8185055021:AAECHvC3MvXbWWufxmg_H3mXIysrLQRzoNs";
+        const ADMIN_UID = "7358825471";
+        const BOT_TOKEN = "8457057802:AAFq7ZFQNePh5Lv1COzzH3TDUuuzH97rBUg";
         // --- Official Channels for Join Check ---
-        const OFFICIAL_CHANNELS = ['@aptechonlineincome', '@gmailmarketter'];
+        const OFFICIAL_CHANNELS = ['@facebook_sell_channel', '@-1002407123712'];
         
         // --- UPDATED FIREBASE CONFIG ---
-        const firebaseConfig = {
-          apiKey: "AIzaSyClz7XBgYHuiF70711CSb6DzDULzN4Okc8",
-          authDomain: "tech-mail-market.firebaseapp.com",
-          databaseURL: "https://tech-mail-market-default-rtdb.firebaseio.com",
-          projectId: "tech-mail-market",
-          storageBucket: "tech-mail-market.firebasestorage.app",
-          messagingSenderId: "28333491796",
-          appId: "1:28333491796:web:caa5daa598b72550830fc1"
-        };
+const firebaseConfig = {
+  apiKey: "AIzaSyBtNIF0NbUsriMB7ZNrwfl_0hEyP6BpH6s",
+  authDomain: "tmgbdsell.firebaseapp.com",
+  databaseURL: "https://tmgbdsell-default-rtdb.firebaseio.com",
+  projectId: "tmgbdsell",
+  storageBucket: "tmgbdsell.firebasestorage.app",
+  messagingSenderId: "711521693696",
+  appId: "1:711521693696:web:f765e256d178fc1c2428e5"
+};
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, limit, runTransaction, getCountFromServer, writeBatch, updateDoc, Timestamp, onSnapshot, arrayUnion, arrayRemove, increment } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
@@ -1132,7 +1149,7 @@
                 'updates-page': () => { loadUpdates(); loadReviews(); },
                 'admin-page': () => { populateAdminMailTypes(); loadReplaceRequests(); },
                 'profile-page': loadProfilePage,
-                'report-history-page': loadReportHistory,
+                'report-history-page': () => { lucide.createIcons(); }, // No data loading needed for "Coming Soon"
                 'features-page': loadFeaturesPage,
                 'tutorial-page': loadTutorials,
                 'link-team-page': loadLinkedFriends,
@@ -1339,6 +1356,34 @@
                     userId: userData.tgChatId, userName: userData.name, method: method, amount: amount,
                     senderNumber: senderNumber, transactionId: transactionId, status: "pending", requestedAt: serverTimestamp()
                 });
+
+                // --- NEW: Send Telegram Notification to Admin ---
+                try {
+                    const adminChatId = "@Deposit_spp";
+                    const message = `
+🔔 *New Deposit Request* 🔔
+
+*User:* ${userData.name} (${userData.tgChatId})
+*Method:* ${method}
+*Amount:* ৳${amount}
+*Sender No:* \`${senderNumber}\`
+*Transaction ID:* \`${transactionId}\`
+
+Please review and process this request.
+                    `;
+                    fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            chat_id: adminChatId,
+                            text: message,
+                            parse_mode: 'Markdown'
+                        })
+                    });
+                } catch (e) {
+                    console.error("Failed to send Telegram notification:", e);
+                }
+                
                 showAlert("আপনার ডিপোজিট অনুরোধ সফলভাবে জমা হয়েছে।");
                 ['deposit-method', 'deposit-amount', 'sender-number', 'deposit-txid'].forEach(id => document.getElementById(id).value = '');
                 loadPaymentHistory();
@@ -1385,30 +1430,45 @@
 
             const stockPromises = mails.map(mail => getStockCount(mail.stockKey));
             const stockCounts = await Promise.all(stockPromises);
-            let mailsWithStock = mails.map((mail, index) => ({ ...mail, stock: stockCounts[index] })).sort((a, b) => b.stock - a.stock);
+            // --- UPDATED SORTING: In-stock items first, then out-of-stock items ---
+            let mailsWithStock = mails.map((mail, index) => ({ ...mail, stock: stockCounts[index] }))
+                                     .sort((a, b) => (b.stock > 0 ? 1 : 0) - (a.stock > 0 ? 1 : 0) || a.priceBdt - b.priceBdt);
 
             containerEl.innerHTML = mailsWithStock.map(mail => {
                 const displayPrice = mail.priceBdt;
                 const isOutOfStock = mail.stock < 1;
                 
+                // --- UPDATED: Calculate max buyable quantity based on stock AND balance ---
+                const canAffordOne = effectiveBalance >= displayPrice;
+                const maxAffordableQty = canAffordOne ? Math.floor(effectiveBalance / displayPrice) : 0;
+                const maxQty = Math.min(mail.stock, maxAffordableQty);
+
                 const validityTagHtml = (mail.expirationHours != null) ? `<span class="bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded-full">${mail.expirationHours}h validity</span>` : '';
                 const apiButtonHtml = mail.apiLink ? `<button onclick="openApiLink('${mail.apiLink}')" class="text-blue-600 font-semibold">API</button>` : '<span class="text-gray-400 font-semibold">API</span>';
                 
                 const encodedDetails = encodeURIComponent(mail.details || '');
                 const encodedFeatures = encodeURIComponent(JSON.stringify(mail.featureList || []));
 
-                const buySection = `
-                    <div class="flex items-center gap-2">
-                        <div class="flex-grow flex items-center border border-gray-300 rounded-lg">
-                            <button onclick="updateQty('${mail.stockKey}', -1, ${mail.stock})" class="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-l-lg">-</button>
-                            <input id="qty-${mail.stockKey}" type="number" min="1" max="${mail.stock}" value="1" class="w-full text-center font-bold border-l border-r bg-white" onchange="validateQty(this, ${mail.stock})">
-                            <button onclick="updateQty('${mail.stockKey}', 1, ${mail.stock})" class="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-r-lg">+</button>
+                // --- UPDATED: Conditional Buy Section ---
+                let buySection;
+                if (isOutOfStock) {
+                    buySection = `<div class="text-center p-3 bg-gray-100 rounded-lg text-red-500 font-bold">Out of Stock</div>`;
+                } else {
+                    buySection = `
+                        <div class="flex items-center gap-2">
+                            <div class="flex-grow flex items-center border border-gray-300 rounded-lg">
+                                <button onclick="updateQty('${mail.stockKey}', -1, ${maxQty})" class="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-l-lg">-</button>
+                                <input id="qty-${mail.stockKey}" type="text" inputmode="numeric" pattern="[0-9]*" min="1" max="${maxQty}" value="1" class="w-full text-center font-bold border-l border-r bg-white" oninput="validateQty(this, ${maxQty})">
+                                <button onclick="updateQty('${mail.stockKey}', 1, ${maxQty})" class="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-r-lg">+</button>
+                            </div>
+                            <button class="btn-gradient w-auto px-6 py-2 rounded-lg text-md flex-shrink-0" ${maxQty < 1 ? 'disabled' : ''} onclick="handleBulkBuy('${mail.type}', ${mail.priceBdt}, '${mail.stockKey}', ${mail.stock})">Buy</button>
                         </div>
-                        <button class="btn-gradient w-auto px-6 py-2 rounded-lg text-md flex-shrink-0" ${isOutOfStock ? 'disabled' : ''} onclick="handleBulkBuy('${mail.type}', ${mail.priceBdt}, '${mail.stockKey}', ${mail.stock})">Buy</button>
-                    </div>
-                `;
+                        ${maxQty < 1 && !canAffordOne ? '<p class="text-xs text-center text-red-500 mt-1">Insufficient balance to buy even one.</p>' : ''}
+                    `;
+                }
 
-                return `<div class="card-bg p-4 rounded-xl space-y-3">
+                // --- UPDATED: Added opacity for out-of-stock items ---
+                return `<div class="card-bg p-4 rounded-xl space-y-3 ${isOutOfStock ? 'opacity-60' : ''}">
                     <div class="flex justify-between items-center">
                         <div class="flex items-center gap-3">
                             <img src="${mail.logoUrl}" class="w-8 h-8 rounded-lg object-cover" alt="${mail.type} logo">
@@ -2159,30 +2219,49 @@
         
         window.updateQty = (stockKey, delta, maxQty) => {
             const input = document.getElementById(`qty-${stockKey}`);
-            let currentValue = parseInt(input.value, 10);
+            let currentValue = parseInt(input.value, 10) || 0;
             currentValue += delta;
             if (currentValue < 1) currentValue = 1;
             if (currentValue > maxQty) currentValue = maxQty;
             input.value = currentValue;
         };
 
+        // --- MODIFIED FUNCTION ---
         window.validateQty = (input, maxQty) => {
-            let value = parseInt(input.value, 10);
-            if (isNaN(value) || value < 1) input.value = 1;
-            if (value > maxQty) input.value = maxQty;
+            // Replace any character that is not a digit (this removes decimals, letters, etc.)
+            input.value = input.value.replace(/[^0-9]/g, '');
+
+            // If the field is not empty after cleaning, check against maxQty
+            if (input.value !== '') {
+                let value = parseInt(input.value, 10);
+                if (value > maxQty) {
+                    input.value = maxQty;
+                }
+                // Do not allow leading zeros like "05"
+                if (input.value.length > 1 && input.value.startsWith('0')) {
+                    input.value = value.toString();
+                }
+            }
         };
         
+        // --- MODIFIED FUNCTION ---
         window.handleBulkBuy = async function(mailType, originalPrice, stockKey, availableStock) {
             const quantityInput = document.getElementById(`qty-${stockKey}`);
             const quantity = parseInt(quantityInput.value, 10);
-            
-            if (isNaN(quantity) || quantity < 1 || quantity > availableStock) {
-                return showAlert(`Please enter a quantity between 1 and ${availableStock}.`);
+
+            // New, more robust validation
+            if (isNaN(quantity) || quantity < 1) {
+                quantityInput.value = '1'; // Reset to a valid number
+                return showAlert(`অনুগ্রহ করে একটি সঠিক পরিমাণ লিখুন।`);
+            }
+
+            if (quantity > availableStock) {
+                return showAlert(`দুঃখিত, স্টকে মাত্র ${availableStock} টি মেইল আছে।`);
             }
 
             const totalCost = quantity * originalPrice;
             
-            if (!confirm(`Buy ${quantity} x ${mailType} mails for a total of ৳${totalCost.toFixed(2)}?`)) return;
+            if (!confirm(`আপনি কি ${quantity} টি ${mailType} মেইল মোট ৳${totalCost.toFixed(2)} দিয়ে কিনতে চান?`)) return;
 
             document.getElementById('app-container').append(loader);
             loader.style.display = 'flex';
@@ -2268,64 +2347,11 @@
             }
         };
         
-        // --- NEW: Function to load user's report history ---
         async function loadReportHistory() {
-            const pendingList = document.getElementById('pending-reports-list');
-            const approvedList = document.getElementById('approved-reports-list');
-            const rejectedList = document.getElementById('rejected-reports-list');
-
-            pendingList.innerHTML = getLoadingHTML();
-            approvedList.innerHTML = getLoadingHTML();
-            rejectedList.innerHTML = getLoadingHTML();
-            
-            try {
-                const q = query(collection(db, "replace_requests"), where("userId", "==", userData.tgChatId), orderBy("requestedAt", "desc"));
-                const snapshot = await getDocs(q);
-
-                if (snapshot.empty) {
-                    const noDataMsg = '<p class="text-center text-gray-500">No reports found.</p>';
-                    pendingList.innerHTML = noDataMsg;
-                    approvedList.innerHTML = noDataMsg;
-                    rejectedList.innerHTML = noDataMsg;
-                    return;
-                }
-                
-                const reports = { pending: [], approved: [], rejected: [] };
-                snapshot.docs.forEach(doc => {
-                    const report = doc.data();
-                    if(reports[report.status]) {
-                        reports[report.status].push(report);
-                    }
-                });
-
-                const renderList = (list, data) => {
-                    if (data.length === 0) {
-                        list.innerHTML = '<p class="text-center text-gray-500">No reports in this category.</p>';
-                        return;
-                    }
-                    list.innerHTML = data.map(r => {
-                        const date = r.requestedAt.toDate().toLocaleString('en-GB');
-                        return `<div class="card-bg p-4 rounded-lg">
-                                    <div class="flex justify-between items-center">
-                                        <h4 class="font-bold text-gray-800">${r.mailType}</h4>
-                                        <span class="text-xs text-gray-500">${date}</span>
-                                    </div>
-                                    <p class="text-sm text-gray-600 mt-2"><strong>Reason:</strong> ${r.reason}</p>
-                                </div>`;
-                    }).join('');
-                };
-
-                renderList(pendingList, reports.pending);
-                renderList(approvedList, reports.approved);
-                renderList(rejectedList, reports.rejected);
-
-            } catch (e) {
-                const errorMsg = '<p class="text-center text-red-500">Failed to load history.</p>';
-                pendingList.innerHTML = errorMsg;
-                approvedList.innerHTML = errorMsg;
-                rejectedList.innerHTML = errorMsg;
-                console.error("Error loading report history:", e);
-            }
+            // "Coming Soon" page doesn't need to load data.
+            // This function is kept for future use.
+            // If you want to re-enable it, uncomment the logic below
+            // and restore the original HTML for #report-history-page.
         }
 
 
