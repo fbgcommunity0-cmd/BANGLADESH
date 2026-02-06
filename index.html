@@ -888,24 +888,42 @@
     <script type="module">
         const ADMIN_UID = "735882471";
         const BOT_TOKEN = "8457057802:AAFq7ZFQNePh5Lv1COzzH3TDUuuzH97rBUg";
-        // --- Official Channels for Join Check ---
         const OFFICIAL_CHANNELS = ['@facebook_sell_channel', '-1002407123712'];
         
-        // --- UPDATED FIREBASE CONFIG ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyClz7XBgYHuiF70711CSb6DzDULzN4Okc8",
-            authDomain: "tech-mail-market.firebaseapp.com",
-            databaseURL: "https://tech-mail-market-default-rtdb.firebaseio.com",
-            projectId: "tech-mail-market",
-            storageBucket: "tech-mail-market.firebasestorage.app",
-            messagingSenderId: "28333491796",
-            appId: "1:28333491796:web:caa5daa598b72550830fc1"
+        // --- UPDATED DUAL FIREBASE CONFIG ---
+
+        // Config 1: For User Balance, Deposits, and Profiles
+        const firebaseConfigUser = {
+          apiKey: "AIzaSyClz7XBgYHuiF70711CSb6DzDULzN4Okc8",
+          authDomain: "tech-mail-market.firebaseapp.com",
+          databaseURL: "https://tech-mail-market-default-rtdb.firebaseio.com",
+          projectId: "tech-mail-market",
+          storageBucket: "tech-mail-market.firebasestorage.app",
+          messagingSenderId: "28333491796",
+          appId: "1:28333491796:web:caa5daa598b72550830fc1"
         };
+
+        // Config 2: For Mail Stock, Purchase History, App Config etc.
+        const firebaseConfigMail = {
+          apiKey: "AIzaSyBtNIF0NbUsriMB7ZNrwfl_0hEyP6BpH6s",
+          authDomain: "tmgbdsell.firebaseapp.com",
+          databaseURL: "https://tmgbdsell-default-rtdb.firebaseio.com",
+          projectId: "tmgbdsell",
+          storageBucket: "tmgbdsell.firebasestorage.app",
+          messagingSenderId: "711521693696",
+          appId: "1:711521693696:web:f765e256d178fc1c2428e5"
+        };
+
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, limit, runTransaction, getCountFromServer, writeBatch, updateDoc, Timestamp, onSnapshot, arrayUnion, arrayRemove, increment } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        // --- Initialize both Firebase apps ---
+        const userApp = initializeApp(firebaseConfigUser, "userApp");
+        const mailApp = initializeApp(firebaseConfigMail, "mailApp");
+
+        // --- Get Firestore instances for each app ---
+        const dbUser = getFirestore(userApp); // Database for user balances, deposits, etc.
+        const dbMail = getFirestore(mailApp); // Database for mails, history, configs, etc.
 
         let currentUserTg = null;
         let userData = null;
@@ -927,10 +945,9 @@
             return `${year}-${month}-${day}`;
         }
         
-        // --- NEW: AUTO-INITIALIZE ON LOAD ---
         window.onload = () => {
              lucide.createIcons();
-             initializeAppLogic(); // Automatically start the app
+             initializeAppLogic();
         };
         
         async function initializeAppLogic() {
@@ -945,17 +962,15 @@
                 }
             } catch (e) {
                 console.error("Telegram WebApp script failed to initialize or user data not available.", e);
-                // Fallback for local testing
                 currentUserTg = { id: '6954647230', first_name: 'Test', last_name: 'User', username: 'testuser' };
             }
 
-            // --- NEW: Channel Membership Check ---
             loaderStatusText.textContent = 'Verifying your access...';
             const isMember = await checkChannelMembership();
             if (!isMember) {
                 loader.style.display = 'none';
                 channelGate.style.display = 'flex';
-                return; // Stop initialization
+                return;
             }
             
             loaderStatusText.textContent = 'Loading your profile...';
@@ -970,18 +985,11 @@
             }, 500);
         }
 
-        // --- NEW: Function to check channel membership ---
         async function getChatMember(channelId) {
             const userId = currentUserTg.id;
             const url = `https://api.telegram.org/bot${BOT_TOKEN}/getChatMember?chat_id=${channelId}&user_id=${userId}`;
             
             try {
-                // IMPORTANT SECURITY NOTE:
-                // This client-side API call exposes your BOT_TOKEN.
-                // For a production app, this check should be done on a server (e.g., a Cloud Function)
-                // where the token is kept secret. The web app would then call your server endpoint.
-                // This implementation is for demonstration based on the request constraints.
-                
                 const response = await fetch(url);
                 const data = await response.json();
                 
@@ -997,7 +1005,6 @@
         }
 
         async function checkChannelMembership() {
-            // For local testing, bypass the check.
             if (currentUserTg.id === '6954647230') {
                  console.log("Bypassing channel check for test user.");
                  return true;
@@ -1005,7 +1012,7 @@
 
             const membershipChecks = OFFICIAL_CHANNELS.map(channel => getChatMember(channel));
             const results = await Promise.all(membershipChecks);
-            return results.every(isMember => isMember); // Must be a member of ALL channels
+            return results.every(isMember => isMember);
         }
 
 
@@ -1015,7 +1022,8 @@
                 return;
             }
             const tgChatId = String(currentUserTg.id);
-            const userRef = doc(db, "users", tgChatId);
+            // IMPORTANT: User data is now fetched from dbUser
+            const userRef = doc(dbUser, "users", tgChatId);
             let userSnap = await getDoc(userRef);
             const todayStr = getTodayDateString();
 
@@ -1034,7 +1042,7 @@
                 }
                 
                 await updateDoc(userRef, updates);
-                userSnap = await getDoc(userRef); // re-fetch to get merged data
+                userSnap = await getDoc(userRef);
                 userData = userSnap.data();
 
             } else {
@@ -1078,18 +1086,17 @@
         }
 
         async function fetchAppConfig() {
-            const configRef = doc(db, "config", "main");
+            // IMPORTANT: App configuration is fetched from dbMail
+            const configRef = doc(dbMail, "config", "main");
             const configSnap = await getDoc(configRef);
             if (configSnap.exists()) {
                 appConfig = configSnap.data();
             } else {
-                // Default values if config is not set in Firebase
                 appConfig = { 
                     mails: [],
                     minDeposit: 50
                 };
             }
-            // Update UI with dynamic values
             const depositAmountInput = document.getElementById('deposit-amount');
             if(depositAmountInput) depositAmountInput.placeholder = `Minimum ৳${appConfig.minDeposit || 50}`;
         }
@@ -1149,7 +1156,7 @@
                 'updates-page': () => { loadUpdates(); loadReviews(); },
                 'admin-page': () => { populateAdminMailTypes(); loadReplaceRequests(); },
                 'profile-page': loadProfilePage,
-                'report-history-page': () => { lucide.createIcons(); }, // No data loading needed for "Coming Soon"
+                'report-history-page': () => { lucide.createIcons(); },
                 'features-page': loadFeaturesPage,
                 'tutorial-page': loadTutorials,
                 'link-team-page': loadLinkedFriends,
@@ -1245,7 +1252,8 @@
         }
 
         function listenForNotifications() {
-            const q = query(collection(db, "notifications"), orderBy("createdAt", "desc"));
+            // IMPORTANT: Notifications are fetched from dbMail
+            const q = query(collection(dbMail, "notifications"), orderBy("createdAt", "desc"));
             onSnapshot(q, (snapshot) => {
                 const filteredDocs = snapshot.docs.filter(doc => {
                     const data = doc.data();
@@ -1253,6 +1261,7 @@
                 });
 
                 let unreadCount = 0;
+                // Note: userData (with lastSeen) comes from dbUser, which is correct.
                 const lastSeen = userData.lastSeenNotification ? userData.lastSeenNotification.toMillis() : 0;
                 
                 filteredDocs.forEach(doc => {
@@ -1277,8 +1286,9 @@
             const listEl = document.getElementById('notification-list');
             listEl.innerHTML = getLoadingHTML();
             modal.classList.remove('hidden');
-
-            const q = query(collection(db, "notifications"), orderBy("createdAt", "desc"), limit(20));
+            
+            // IMPORTANT: Notifications are fetched from dbMail
+            const q = query(collection(dbMail, "notifications"), orderBy("createdAt", "desc"), limit(20));
             const snapshot = await getDocs(q);
 
             const filteredDocs = snapshot.docs.filter(doc => {
@@ -1304,7 +1314,8 @@
 
         async function hideNotifications() {
             document.getElementById('notification-modal').classList.add('hidden');
-            const userRef = doc(db, "users", userData.tgChatId);
+            // IMPORTANT: User's notification status is updated in dbUser
+            const userRef = doc(dbUser, "users", userData.tgChatId);
             const newTimestamp = Timestamp.now();
             await updateDoc(userRef, { lastSeenNotification: newTimestamp });
             userData.lastSeenNotification = newTimestamp;
@@ -1346,18 +1357,18 @@
             loader.style.display = 'flex';
 
             try {
-                const depositQuery = query(collection(db, "deposits"), where("transactionId", "==", transactionId), where("status", "in", ["pending", "approved"]));
+                // IMPORTANT: Deposit requests are stored in dbUser
+                const depositQuery = query(collection(dbUser, "deposits"), where("transactionId", "==", transactionId), where("status", "in", ["pending", "approved"]));
                 const querySnapshot = await getDocs(depositQuery);
                 if (!querySnapshot.empty) {
                     loader.style.display = 'none';
                     return showAlert("এই Transaction ID দিয়ে ইতিমধ্যে একটি ডিপোজিট অনুরোধ জমা দেওয়া হয়েছে।");
                 }
-                await addDoc(collection(db, "deposits"), {
+                await addDoc(collection(dbUser, "deposits"), {
                     userId: userData.tgChatId, userName: userData.name, method: method, amount: amount,
                     senderNumber: senderNumber, transactionId: transactionId, status: "pending", requestedAt: serverTimestamp()
                 });
 
-                // --- NEW: Send Telegram Notification to Admin ---
                 try {
                     const adminChatId = "@Deposit_spp";
                     const message = `
@@ -1395,7 +1406,8 @@ Please review and process this request.
             const historyList = document.getElementById('payment-history-list');
             historyList.innerHTML = getLoadingHTML();
             try {
-                const q = query(collection(db, "deposits"), where("userId", "==", userData.tgChatId), orderBy("requestedAt", "desc"));
+                // IMPORTANT: Payment history is fetched from dbUser
+                const q = query(collection(dbUser, "deposits"), where("userId", "==", userData.tgChatId), orderBy("requestedAt", "desc"));
                 const snapshot = await getDocs(q);
                 if (snapshot.empty) return historyList.innerHTML = '<p class="text-gray-600 text-center">কোনো রেকর্ড পাওয়া যায়নি।</p>';
 
@@ -1416,7 +1428,8 @@ Please review and process this request.
 
         async function getStockCount(collectionName) {
             try {
-                const q = query(collection(db, collectionName), where("isSold", "==", false));
+                // IMPORTANT: Mail stock count comes from dbMail
+                const q = query(collection(dbMail, collectionName), where("isSold", "==", false));
                 const snapshot = await getCountFromServer(q);
                 return snapshot.data().count;
             } catch (error) { console.error(`Error getting stock count for ${collectionName}:`, error); return 0; }
@@ -1430,7 +1443,7 @@ Please review and process this request.
 
             const stockPromises = mails.map(mail => getStockCount(mail.stockKey));
             const stockCounts = await Promise.all(stockPromises);
-            // --- UPDATED SORTING: In-stock items first, then out-of-stock items ---
+            
             let mailsWithStock = mails.map((mail, index) => ({ ...mail, stock: stockCounts[index] }))
                                      .sort((a, b) => (b.stock > 0 ? 1 : 0) - (a.stock > 0 ? 1 : 0) || a.priceBdt - b.priceBdt);
 
@@ -1438,7 +1451,6 @@ Please review and process this request.
                 const displayPrice = mail.priceBdt;
                 const isOutOfStock = mail.stock < 1;
                 
-                // --- UPDATED: Calculate max buyable quantity based on stock AND balance ---
                 const canAffordOne = effectiveBalance >= displayPrice;
                 const maxAffordableQty = canAffordOne ? Math.floor(effectiveBalance / displayPrice) : 0;
                 const maxQty = Math.min(mail.stock, maxAffordableQty);
@@ -1449,7 +1461,6 @@ Please review and process this request.
                 const encodedDetails = encodeURIComponent(mail.details || '');
                 const encodedFeatures = encodeURIComponent(JSON.stringify(mail.featureList || []));
 
-                // --- UPDATED: Conditional Buy Section ---
                 let buySection;
                 if (isOutOfStock) {
                     buySection = `<div class="text-center p-3 bg-gray-100 rounded-lg text-red-500 font-bold">Out of Stock</div>`;
@@ -1467,7 +1478,6 @@ Please review and process this request.
                     `;
                 }
 
-                // --- UPDATED: Added opacity for out-of-stock items ---
                 return `<div class="card-bg p-4 rounded-xl space-y-3 ${isOutOfStock ? 'opacity-60' : ''}">
                     <div class="flex justify-between items-center">
                         <div class="flex items-center gap-3">
@@ -1518,16 +1528,18 @@ Please review and process this request.
             historyListEl.innerHTML = getLoadingHTML();
             
             try {
-                const userSnap = await getDoc(doc(db, "users", userData.tgChatId));
+                // IMPORTANT: Fetch latest user data and balance from dbUser
+                const userSnap = await getDoc(doc(dbUser, "users", userData.tgChatId));
                 userData = userSnap.data();
                 updateUI();
 
                 let effectiveBalance = userData.balance;
                 if (userData.linkedBy) {
-                    const teamLeaderSnap = await getDoc(doc(db, "users", userData.linkedBy));
+                    const teamLeaderSnap = await getDoc(doc(dbUser, "users", userData.linkedBy));
                     if (teamLeaderSnap.exists()) effectiveBalance += teamLeaderSnap.data().balance;
                 }
-
+                
+                // Mail configurations are fetched earlier from dbMail via fetchAppConfig()
                 const allMails = appConfig.mails || [];
                 const loginMails = allMails.filter(m => m.category === 'login' || !m.category);
                 const otpMails = allMails.filter(m => m.category === 'otp');
@@ -1538,13 +1550,14 @@ Please review and process this request.
                 ]);
                 
                 switchMailView('login');
-
+                
+                // IMPORTANT: Purchase history and reports come from dbMail
                 const twentyFourHoursAgo = Timestamp.fromDate(new Date(Date.now() - 24 * 60 * 60 * 1000));
-                const q = query(collection(db, "mail_purchases"), where("userId", "==", userData.tgChatId), where("purchasedAt", ">=", twentyFourHoursAgo), orderBy("purchasedAt", "desc"));
+                const q = query(collection(dbMail, "mail_purchases"), where("userId", "==", userData.tgChatId), where("purchasedAt", ">=", twentyFourHoursAgo), orderBy("purchasedAt", "desc"));
                 const querySnapshot = await getDocs(q);
 
                 const purchaseIds = querySnapshot.docs.map(d => d.id);
-                const replaceRequestsQuery = purchaseIds.length ? query(collection(db, "replace_requests"), where("purchaseId", "in", purchaseIds)) : null;
+                const replaceRequestsQuery = purchaseIds.length ? query(collection(dbMail, "replace_requests"), where("purchaseId", "in", purchaseIds)) : null;
                 const replaceSnapshot = replaceRequestsQuery ? await getDocs(replaceRequestsQuery) : { docs: [] };
                 
                 const reportStatusMap = new Map();
@@ -1658,7 +1671,8 @@ Please review and process this request.
             document.getElementById('app-container').append(loader);
             loader.style.display = 'flex';
             try {
-                const q = query(collection(db, "mail_purchases"), where("userId", "==", userData.tgChatId), orderBy("purchasedAt", "desc"));
+                // IMPORTANT: Purchase history is fetched from dbMail
+                const q = query(collection(dbMail, "mail_purchases"), where("userId", "==", userData.tgChatId), orderBy("purchasedAt", "desc"));
                 const querySnapshot = await getDocs(q);
                 if (querySnapshot.empty) {
                     loader.style.display = 'none';
@@ -1690,7 +1704,8 @@ Please review and process this request.
             loader.style.display = 'flex';
             try {
                 const tenHoursAgo = Timestamp.fromDate(new Date(Date.now() - 10 * 60 * 60 * 1000));
-                const q = query(collection(db, "mail_purchases"), where("userId", "==", userData.tgChatId), where("purchasedAt", ">=", tenHoursAgo), orderBy("purchasedAt", "desc"));
+                // IMPORTANT: Purchase history is fetched from dbMail
+                const q = query(collection(dbMail, "mail_purchases"), where("userId", "==", userData.tgChatId), where("purchasedAt", ">=", tenHoursAgo), orderBy("purchasedAt", "desc"));
                 const querySnapshot = await getDocs(q);
                 if (querySnapshot.empty) {
                     loader.style.display = 'none';
@@ -1759,7 +1774,8 @@ Please review and process this request.
             const updatesContainer = document.getElementById('updates-content');
             updatesContainer.innerHTML = getLoadingHTML();
             try {
-                const q = query(collection(db, "updates"), orderBy("createdAt", "desc"), limit(1));
+                // IMPORTANT: Updates are fetched from dbMail
+                const q = query(collection(dbMail, "updates"), orderBy("createdAt", "desc"), limit(1));
                 const snapshot = await getDocs(q);
                 if (snapshot.empty) return updatesContainer.innerHTML = `<div class="card-bg p-6 rounded-2xl text-center"><h3 class="font-bold text-xl text-gray-800">No new updates right now!</h3><p class="text-gray-600 mt-2">Check back later.</p></div>`;
 
@@ -1794,12 +1810,13 @@ Please review and process this request.
             document.getElementById('app-container').append(loader);
             loader.style.display = 'flex';
             try {
-                const batch = writeBatch(db);
+                // IMPORTANT: New mails are added to dbMail
+                const batch = writeBatch(dbMail);
                 let addedCount = 0;
                 lines.forEach(line => {
                     const parts = line.trim().split('|');
                     if (parts.length >= 2) { 
-                        batch.set(doc(collection(db, stockKey)), { 
+                        batch.set(doc(collection(dbMail, stockKey)), { 
                             email: parts[0], password: parts[1], 
                             refresh_token: parts[2] || null, client_id: parts[3] || null, 
                             isSold: false, createdAt: serverTimestamp() 
@@ -1863,8 +1880,9 @@ Please review and process this request.
             document.getElementById('total-receive-display').textContent = `...`;
             document.getElementById('total-send-display').textContent = `...`;
             try {
-                const receivedQuery = query(collection(db, "transfers"), where("toId", "==", userData.tgChatId));
-                const sentQuery = query(collection(db, "transfers"), where("fromId", "==", userData.tgChatId));
+                // IMPORTANT: Transfer history is fetched from dbUser
+                const receivedQuery = query(collection(dbUser, "transfers"), where("toId", "==", userData.tgChatId));
+                const sentQuery = query(collection(dbUser, "transfers"), where("fromId", "==", userData.tgChatId));
                 const [receivedSnapshot, sentSnapshot] = await Promise.all([getDocs(receivedQuery), getDocs(sentQuery)]);
                 
                 const totalReceive = receivedSnapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
@@ -1880,8 +1898,9 @@ Please review and process this request.
             const historyList = document.getElementById('transfer-history-list');
             historyList.innerHTML = getLoadingHTML();
             try {
-                const sentQuery = query(collection(db, "transfers"), where("fromId", "==", userData.tgChatId));
-                const receivedQuery = query(collection(db, "transfers"), where("toId", "==", userData.tgChatId));
+                // IMPORTANT: Transfer history is fetched from dbUser
+                const sentQuery = query(collection(dbUser, "transfers"), where("fromId", "==", userData.tgChatId));
+                const receivedQuery = query(collection(dbUser, "transfers"), where("toId", "==", userData.tgChatId));
                 const [sentDocs, receivedDocs] = await Promise.all([getDocs(sentQuery), getDocs(receivedQuery)]);
                 
                 const transactions = [...sentDocs.docs, ...receivedDocs.docs]
@@ -1926,9 +1945,10 @@ Please review and process this request.
             document.getElementById('app-container').append(loader);
             loader.style.display = 'flex';
             try {
-                await runTransaction(db, async (transaction) => {
-                    const senderRef = doc(db, "users", userData.tgChatId);
-                    const recipientRef = doc(db, "users", recipientId);
+                // IMPORTANT: Balance transfer logic uses dbUser
+                await runTransaction(dbUser, async (transaction) => {
+                    const senderRef = doc(dbUser, "users", userData.tgChatId);
+                    const recipientRef = doc(dbUser, "users", recipientId);
                     const [senderDoc, recipientDoc] = await Promise.all([transaction.get(senderRef), transaction.get(recipientRef)]);
 
                     if (!senderDoc.exists() || senderDoc.data().balance < totalCost) throw "অপর্যাপ্ত ব্যালেন্স।";
@@ -1936,7 +1956,7 @@ Please review and process this request.
                     
                     transaction.update(senderRef, { balance: senderDoc.data().balance - totalCost });
                     transaction.update(recipientRef, { balance: recipientDoc.data().balance + amount });
-                    transaction.set(doc(collection(db, "transfers")), { 
+                    transaction.set(doc(collection(dbUser, "transfers")), { 
                         fromId: userData.tgChatId, fromName: userData.name, toId: recipientId, 
                         toName: recipientDoc.data().name, amount, fee, totalDeducted: totalCost, 
                         timestamp: serverTimestamp() 
@@ -1957,7 +1977,8 @@ Please review and process this request.
             const searchResultEl = document.getElementById('friend-search-result');
             searchResultEl.innerHTML = getLoadingHTML();
             
-            const friendSnap = await getDoc(doc(db, "users", friendId));
+            // IMPORTANT: Friend data is fetched from dbUser
+            const friendSnap = await getDoc(doc(dbUser, "users", friendId));
             if (!friendSnap.exists()) return searchResultEl.innerHTML = `<p class="text-red-500 text-center mt-2">User not found.</p>`;
 
             const friend = friendSnap.data();
@@ -1971,8 +1992,9 @@ Please review and process this request.
         window.confirmLinkFriend = async function(friendId) {
             document.getElementById('friend-search-result').innerHTML = getLoadingHTML();
             try {
-                await updateDoc(doc(db, "users", userData.tgChatId), { linkedUsers: arrayUnion(friendId) });
-                await updateDoc(doc(db, "users", friendId), { linkedBy: userData.tgChatId });
+                // IMPORTANT: Linking friends updates documents in dbUser
+                await updateDoc(doc(dbUser, "users", userData.tgChatId), { linkedUsers: arrayUnion(friendId) });
+                await updateDoc(doc(dbUser, "users", friendId), { linkedBy: userData.tgChatId });
                 showAlert(`Successfully linked!`);
                 document.getElementById('link-friend-id').value = '';
                 document.getElementById('friend-search-result').innerHTML = '';
@@ -1986,14 +2008,15 @@ Please review and process this request.
             const listEl = document.getElementById('linked-friends-list');
             listEl.innerHTML = getLoadingHTML();
             
-            const userSnap = await getDoc(doc(db, "users", userData.tgChatId));
+            // IMPORTANT: User and friend data is fetched from dbUser
+            const userSnap = await getDoc(doc(dbUser, "users", userData.tgChatId));
             if (!userSnap.exists()) return listEl.innerHTML = '<p class="text-center text-red-500">Could not load your data.</p>';
             userData = userSnap.data();
             
             const linkedIds = userData.linkedUsers || [];
             if (linkedIds.length === 0) return listEl.innerHTML = '<p class="text-center text-gray-500">You have no team members yet.</p>';
 
-            const friendDocs = await Promise.all(linkedIds.map(id => getDoc(doc(db, "users", id))));
+            const friendDocs = await Promise.all(linkedIds.map(id => getDoc(doc(dbUser, "users", id))));
             listEl.innerHTML = friendDocs.map(friendDoc => {
                 if (!friendDoc.exists()) return '';
                 const friend = friendDoc.data();
@@ -2011,8 +2034,9 @@ Please review and process this request.
             document.getElementById('app-container').append(loader);
             loader.style.display = 'flex';
             try {
-                await updateDoc(doc(db, "users", userData.tgChatId), { linkedUsers: arrayRemove(friendId) });
-                await updateDoc(doc(db, "users", friendId), { linkedBy: null });
+                // IMPORTANT: Unlinking updates documents in dbUser
+                await updateDoc(doc(dbUser, "users", userData.tgChatId), { linkedUsers: arrayRemove(friendId) });
+                await updateDoc(doc(dbUser, "users", friendId), { linkedBy: null });
                 showAlert("Friend has been unlinked.");
                 loadLinkedFriends();
             } catch (e) { showAlert("Failed to unlink friend."); } 
@@ -2023,7 +2047,8 @@ Please review and process this request.
             const tutorialListEl = document.getElementById('tutorial-list');
             tutorialListEl.innerHTML = getLoadingHTML();
             try {
-                const snapshot = await getDocs(query(collection(db, "tutorials"), orderBy("order")));
+                // IMPORTANT: Tutorials are fetched from dbMail
+                const snapshot = await getDocs(query(collection(dbMail, "tutorials"), orderBy("order")));
                 if (snapshot.empty) return tutorialListEl.innerHTML = '<p class="text-center text-gray-600">No tutorials available.</p>';
                 tutorialListEl.innerHTML = snapshot.docs.map(doc => {
                     const t = doc.data();
@@ -2038,7 +2063,8 @@ Please review and process this request.
             const reviewListEl = document.getElementById('reviews-list');
             reviewListEl.innerHTML = getLoadingHTML();
             try {
-                const snapshot = await getDocs(query(collection(db, "reviews"), orderBy("createdAt", "desc"), limit(5)));
+                // IMPORTANT: Reviews are fetched from dbMail
+                const snapshot = await getDocs(query(collection(dbMail, "reviews"), orderBy("createdAt", "desc"), limit(5)));
                 if (snapshot.empty) return reviewListEl.innerHTML = '<p class="text-center text-gray-600">No reviews yet.</p>';
 
                 reviewListEl.innerHTML = snapshot.docs.map(doc => {
@@ -2055,7 +2081,8 @@ Please review and process this request.
             const supportContainer = document.getElementById('support-channels-list');
             supportContainer.innerHTML = getLoadingHTML();
             try {
-                const snapshot = await getDocs(query(collection(db, "support_channels"), orderBy("order", "asc")));
+                // IMPORTANT: Support channels are fetched from dbMail
+                const snapshot = await getDocs(query(collection(dbMail, "support_channels"), orderBy("order", "asc")));
                 if (snapshot.empty) return supportContainer.innerHTML = '<p class="p-4 text-center text-gray-600">No support channels available.</p>';
                 supportContainer.innerHTML = snapshot.docs.map(doc => {
                     const channel = doc.data();
@@ -2089,13 +2116,14 @@ Please review and process this request.
             document.getElementById('app-container').append(loader);
             loader.style.display = 'flex';
             try {
-                 const requestQuery = query(collection(db, "replace_requests"), where("purchaseId", "==", purchaseId), limit(1));
+                 // IMPORTANT: Reports are stored in dbMail
+                 const requestQuery = query(collection(dbMail, "replace_requests"), where("purchaseId", "==", purchaseId), limit(1));
                  const existingRequest = await getDocs(requestQuery);
                  if (!existingRequest.empty) {
                      throw new Error("এই মেইলটির জন্য ইতিমধ্যে একটি অভিযোগ জমা দেওয়া হয়েছে।");
                  }
 
-                await addDoc(collection(db, "replace_requests"), {
+                await addDoc(collection(dbMail, "replace_requests"), {
                     userId: userData.tgChatId,
                     userName: userData.name,
                     purchaseId: purchaseId,
@@ -2121,7 +2149,8 @@ Please review and process this request.
             const listEl = document.getElementById('replace-requests-list');
             listEl.innerHTML = getLoadingHTML();
             try {
-                const q = query(collection(db, "replace_requests"), where("status", "==", "pending"), orderBy("requestedAt", "desc"));
+                // IMPORTANT: Replace requests are fetched from dbMail
+                const q = query(collection(dbMail, "replace_requests"), where("status", "==", "pending"), orderBy("requestedAt", "desc"));
                 const snapshot = await getDocs(q);
                 if (snapshot.empty) return listEl.innerHTML = '<p class="text-center text-gray-500">No pending requests.</p>';
 
@@ -2152,22 +2181,25 @@ Please review and process this request.
             document.getElementById('app-container').append(loader);
             loader.style.display = 'flex';
             try {
-                await runTransaction(db, async (transaction) => {
-                    const requestRef = doc(db, "replace_requests", requestId);
-                    const userRef = doc(db, "users", userId);
-                    const purchaseRef = doc(db, "mail_purchases", purchaseId);
+                // This is a dual-database operation, not transactional
+                const requestRef = doc(dbMail, "replace_requests", requestId);
+                const userRef = doc(dbUser, "users", userId);
+                const purchaseRef = doc(dbMail, "mail_purchases", purchaseId);
+                
+                // Step 1: Update mail-related data in dbMail
+                const mailBatch = writeBatch(dbMail);
+                mailBatch.update(requestRef, { status: 'approved', resolvedAt: serverTimestamp() });
+                mailBatch.update(purchaseRef, { isRefunded: true });
+                await mailBatch.commit();
+                
+                // Step 2: Update user balance in dbUser
+                await updateDoc(userRef, { balance: increment(cost) });
 
-                    const userDoc = await transaction.get(userRef);
-                    if (!userDoc.exists()) throw new Error("User not found.");
-
-                    transaction.update(requestRef, { status: 'approved', resolvedAt: serverTimestamp() });
-                    transaction.update(userRef, { balance: increment(cost) });
-                    transaction.update(purchaseRef, { isRefunded: true });
-                });
                 showAlert("Request approved and balance refunded successfully.");
                 loadReplaceRequests();
             } catch(e) {
-                showAlert(`Failed to approve request: ${e.message}`);
+                showAlert(`Failed to approve request: ${e.message}. Manual check might be needed.`);
+                console.error("Approval Error:", e);
             } finally {
                 loader.style.display = 'none';
             }
@@ -2178,16 +2210,18 @@ Please review and process this request.
             document.getElementById('app-container').append(loader);
             loader.style.display = 'flex';
             try {
-                const userRef = doc(db, "users", userId);
-                const requestRef = doc(db, "replace_requests", requestId);
+                 // This is a dual-database operation
+                const requestRef = doc(dbMail, "replace_requests", requestId);
+                const userRef = doc(dbUser, "users", userId);
 
-                await runTransaction(db, async (transaction) => {
+                // Step 1: Update user penalty data in dbUser
+                await runTransaction(dbUser, async (transaction) => {
                     const userSnap = await transaction.get(userRef);
                     if (!userSnap.exists()) throw new Error("User not found");
-                    const userData = userSnap.data();
+                    const currentData = userSnap.data();
 
                     const today = new Date().toISOString().slice(0, 10);
-                    let dailyRejections = userData.dailyRejections || { date: today, count: 0 };
+                    let dailyRejections = currentData.dailyRejections || { date: today, count: 0 };
 
                     if (dailyRejections.date !== today) {
                         dailyRejections = { date: today, count: 1 };
@@ -2195,9 +2229,7 @@ Please review and process this request.
                         dailyRejections.count += 1;
                     }
 
-                    const updates = {
-                        "dailyRejections": dailyRejections
-                    };
+                    const updates = { "dailyRejections": dailyRejections };
 
                     if (dailyRejections.count >= 5) {
                         updates.isBlocked = true;
@@ -2205,13 +2237,16 @@ Please review and process this request.
                     }
                     
                     transaction.update(userRef, updates);
-                    transaction.update(requestRef, { status: 'rejected', resolvedAt: serverTimestamp() });
                 });
+                
+                // Step 2: Update request status in dbMail
+                await updateDoc(requestRef, { status: 'rejected', resolvedAt: serverTimestamp() });
 
                 showAlert("Request has been rejected. User's rejection count updated.");
                 loadReplaceRequests();
             } catch(e) {
                 showAlert(`Failed to reject request: ${e.message}`);
+                 console.error("Rejection Error:", e);
             } finally {
                 loader.style.display = 'none';
             }
@@ -2226,32 +2261,26 @@ Please review and process this request.
             input.value = currentValue;
         };
 
-        // --- MODIFIED FUNCTION ---
         window.validateQty = (input, maxQty) => {
-            // Replace any character that is not a digit (this removes decimals, letters, etc.)
             input.value = input.value.replace(/[^0-9]/g, '');
 
-            // If the field is not empty after cleaning, check against maxQty
             if (input.value !== '') {
                 let value = parseInt(input.value, 10);
                 if (value > maxQty) {
                     input.value = maxQty;
                 }
-                // Do not allow leading zeros like "05"
                 if (input.value.length > 1 && input.value.startsWith('0')) {
                     input.value = value.toString();
                 }
             }
         };
         
-        // --- MODIFIED FUNCTION ---
         window.handleBulkBuy = async function(mailType, originalPrice, stockKey, availableStock) {
             const quantityInput = document.getElementById(`qty-${stockKey}`);
             const quantity = parseInt(quantityInput.value, 10);
 
-            // New, more robust validation
             if (isNaN(quantity) || quantity < 1) {
-                quantityInput.value = '1'; // Reset to a valid number
+                quantityInput.value = '1';
                 return showAlert(`অনুগ্রহ করে একটি সঠিক পরিমাণ লিখুন।`);
             }
 
@@ -2266,81 +2295,86 @@ Please review and process this request.
             document.getElementById('app-container').append(loader);
             loader.style.display = 'flex';
             
+            let purchasedMailsData = [];
+            // This is a complex operation across two databases, so it cannot be a single atomic transaction.
+            // We will deduct balance first, and if that succeeds, process the mails.
+            
+            // --- Phase 1: Deduct Balance from dbUser ---
+            const buyerRef = doc(dbUser, "users", userData.tgChatId);
+            const userSnap = await getDoc(buyerRef);
+            let currentBuyerData = userSnap.data();
+            let effectiveBalance = currentBuyerData.balance;
+            let teamLeaderRef = null;
+            let teamLeaderSnap = null;
+
+            if (currentBuyerData.linkedBy) {
+                teamLeaderRef = doc(dbUser, "users", currentBuyerData.linkedBy);
+                teamLeaderSnap = await getDoc(teamLeaderRef);
+                if(teamLeaderSnap.exists()) {
+                    effectiveBalance += teamLeaderSnap.data().balance;
+                }
+            }
+
+            if (effectiveBalance < totalCost) {
+                loader.style.display = 'none';
+                return showAlert(`Insufficient balance. You need ৳${totalCost.toFixed(2)} but have ৳${effectiveBalance.toFixed(2)}.`);
+            }
+
             try {
-                let purchasedMailsData = [];
+                // --- Phase 2: Get available mails from dbMail ---
+                const mailQuery = query(collection(dbMail, stockKey), where("isSold", "==", false), limit(quantity));
+                const mailQuerySnapshot = await getDocs(mailQuery);
 
-                await runTransaction(db, async (transaction) => {
-                    const buyerRef = doc(db, "users", userData.tgChatId);
-                    const buyerSnap = await transaction.get(buyerRef);
-                    if (!buyerSnap.exists()) throw new Error("User data not found.");
-                    
-                    const currentBuyerData = buyerSnap.data();
-                    let effectiveBalance = currentBuyerData.balance;
-                    
-                    let teamLeaderRef = null;
-                    let currentLeaderData = null;
-                    if (currentBuyerData.linkedBy) {
-                        teamLeaderRef = doc(db, "users", currentBuyerData.linkedBy);
-                        const leaderSnap = await transaction.get(teamLeaderRef);
-                        if(leaderSnap.exists()) {
-                            currentLeaderData = leaderSnap.data();
-                            effectiveBalance += currentLeaderData.balance;
-                        }
-                    }
-                    
-                    if (effectiveBalance < totalCost) {
-                        throw new Error(`Insufficient balance. You need ৳${totalCost.toFixed(2)} but have ৳${effectiveBalance.toFixed(2)}.`);
-                    }
-                    
-                    const mailQuery = query(collection(db, stockKey), where("isSold", "==", false), limit(quantity));
-                    const mailQuerySnapshot = await getDocs(mailQuery);
-
-                    if (mailQuerySnapshot.docs.length < quantity) {
-                        throw new Error(`Not enough stock. Only ${mailQuerySnapshot.docs.length} mails available.`);
-                    }
-
+                if (mailQuerySnapshot.docs.length < quantity) {
+                    throw new Error(`Not enough stock. Only ${mailQuerySnapshot.docs.length} mails available.`);
+                }
+                
+                // --- Phase 3: Update balances in dbUser (Transactionally) ---
+                await runTransaction(dbUser, async (transaction) => {
+                    const freshBuyerSnap = await transaction.get(buyerRef);
                     let costRemaining = totalCost;
-                    if (currentBuyerData.balance > 0) {
-                        const deduction = Math.min(costRemaining, currentBuyerData.balance);
-                        transaction.update(buyerRef, { balance: increment(-deduction) });
-                        costRemaining -= deduction;
-                    }
+
+                    const buyerBalance = freshBuyerSnap.data().balance;
+                    const buyerDeduction = Math.min(costRemaining, buyerBalance);
+                    transaction.update(buyerRef, { balance: increment(-buyerDeduction) });
+                    costRemaining -= buyerDeduction;
+
                     if (costRemaining > 0 && teamLeaderRef) {
-                        transaction.update(teamLeaderRef, { balance: increment(-costRemaining) });
-                        transaction.update(teamLeaderRef, { [`teamSpending.${userData.tgChatId}`]: increment(costRemaining) });
-                    }
-
-                    mailQuerySnapshot.docs.forEach(mailDoc => {
-                        const mailData = mailDoc.data();
-                        purchasedMailsData.push({
-                            email: mailData.email,
-                            password: mailData.password || null,
-                            refresh_token: mailData.refresh_token || null,
-                            client_id: mailData.client_id || null
+                        transaction.update(teamLeaderRef, { 
+                            balance: increment(-costRemaining),
+                            [`teamSpending.${userData.tgChatId}`]: increment(costRemaining) 
                         });
-                        transaction.update(doc(db, stockKey, mailDoc.id), { isSold: true, soldTo: userData.tgChatId, soldAt: serverTimestamp() });
-                    });
-
-                    const purchaseLogRef = doc(collection(db, "mail_purchases"));
-                    transaction.set(purchaseLogRef, {
-                        userId: userData.tgChatId, mailType: mailType, type: 'bulk', stockKey: stockKey,
-                        mails: purchasedMailsData,
-                        cost: totalCost,
-                        quantity: quantity,
-                        purchasedAt: serverTimestamp()
-                    });
-
+                    }
                 });
 
-                showBulkPurchaseSuccess(purchasedMailsData, mailType, stockKey);
-                loadMailStore();
-                const finalUserSnap = await getDoc(doc(db, "users", userData.tgChatId));
-                userData = finalUserSnap.data();
-                updateUI();
+                // --- Phase 4: Mark mails as sold and log the purchase in dbMail ---
+                const mailBatch = writeBatch(dbMail);
+                mailQuerySnapshot.docs.forEach(mailDoc => {
+                    const mailData = mailDoc.data();
+                    purchasedMailsData.push({
+                        email: mailData.email, password: mailData.password || null,
+                        refresh_token: mailData.refresh_token || null, client_id: mailData.client_id || null
+                    });
+                    mailBatch.update(doc(dbMail, stockKey, mailDoc.id), { isSold: true, soldTo: userData.tgChatId, soldAt: serverTimestamp() });
+                });
 
+                const purchaseLogRef = doc(collection(dbMail, "mail_purchases"));
+                mailBatch.set(purchaseLogRef, {
+                    userId: userData.tgChatId, mailType: mailType, type: 'bulk', stockKey: stockKey,
+                    mails: purchasedMailsData, cost: totalCost, quantity: quantity, purchasedAt: serverTimestamp()
+                });
+                
+                await mailBatch.commit();
+
+                // --- Success ---
+                showBulkPurchaseSuccess(purchasedMailsData, mailType, stockKey);
+                loadMailStore(); // This will re-fetch user data from dbUser internally
+                
             } catch (e) {
-                showAlert(`Bulk purchase failed: ${e.message}`);
+                showAlert(`Bulk purchase failed: ${e.message}. If balance was deducted, contact support immediately.`);
                 console.error("Bulk Buy Error:", e);
+                // NOTE: A more robust system would have a rollback or a "pending" state here,
+                // but for this implementation, we alert the user.
                 loadMailStore();
             } finally {
                 loader.style.display = 'none';
@@ -2349,9 +2383,6 @@ Please review and process this request.
         
         async function loadReportHistory() {
             // "Coming Soon" page doesn't need to load data.
-            // This function is kept for future use.
-            // If you want to re-enable it, uncomment the logic below
-            // and restore the original HTML for #report-history-page.
         }
 
 
